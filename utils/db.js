@@ -1,52 +1,40 @@
-import { MongoClient } from 'mongodb';
+import MongoClient from 'mongodb/lib/mongo_client';
 
 class DBClient {
   constructor() {
     const host = process.env.DB_HOST || 'localhost';
     const port = process.env.DB_PORT || 27017;
-    const database = process.env.DB_DATABASE || 'files_manager';
+    this.dbName = process.env.DB_DATABASE || 'files_manager';
+    this.client = new MongoClient(`mongodb://${host}:${port}/${this.dbName}`, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    this._connected = false;
 
-    const uri = `mongodb://${host}:${port}/${database}`;
-    this.client = new MongoClient(uri);
+    this.client
+      .connect()
+      .then(() => {
+        this._connected = true;
+      })
+      .catch((err) => console.log(err));
   }
 
-  async isAlive() {
-    try {
-      await this.client.connect();
-      return true;
-    } catch (error) {
-      console.error('DB connection error:', error);
-      return false;
-    }
+  isAlive() {
+    return this.client.isConnected();
   }
 
   async nbUsers() {
-    try {
-      await this.client.connect();
-      const db = this.client.db();
-      const usersCollection = db.collection('users');
-      const count = await usersCollection.countDocuments();
-      return count;
-    } catch (error) {
-      console.error('Error retrieving the number of users:', error);
-      throw error;
-    }
+    return this.client.db(this.dbName).collection('users').countDocuments();
   }
 
   async nbFiles() {
-    try {
-      await this.client.connect();
-      const db = this.client.db();
-      const filesCollection = db.collection('files');
-      const count = await filesCollection.countDocuments();
-      return count;
-    } catch (error) {
-      console.error('Error retrieving the number of files:', error);
-      throw error;
-    }
+    return this.client.db(this.dbName).collection('files').countDocuments();
+  }
+
+  collection(name) {
+    return this.client.db(this.dbName).collection(name);
   }
 }
 
 const dbClient = new DBClient();
-
-export defualt dbClient;
+export default dbClient;
